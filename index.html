@@ -1,180 +1,195 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Core Reactor Challenge</title>
+<title>Energy Lock Breaker</title>
 
 <style>
 body {
     margin: 0;
+    background: radial-gradient(circle at center, #0f2027, #000);
     font-family: Arial, sans-serif;
-    background: radial-gradient(circle at center, #0f0f0f, #000);
     color: white;
     text-align: center;
     overflow: hidden;
 }
 
-h1 {
-    margin-top: 15px;
-}
+h1 { margin-top: 10px; }
 
 textarea {
     width: 80%;
     max-width: 500px;
-    height: 80px;
+    height: 70px;
     border-radius: 10px;
     border: none;
     padding: 10px;
-    font-size: 1rem;
     resize: none;
 }
 
 button {
-    margin: 10px;
-    padding: 12px 25px;
-    border-radius: 25px;
+    margin: 8px;
+    padding: 10px 20px;
+    border-radius: 20px;
     border: none;
     font-weight: bold;
     cursor: pointer;
-    background: linear-gradient(45deg, #00c6ff, #0072ff);
+    background: linear-gradient(45deg, #ff416c, #ff4b2b);
     color: white;
 }
 
-#gameCanvas {
-    margin-top: 20px;
-    touch-action: manipulation;
-}
-
-#charges {
-    font-size: 1.3rem;
-    margin-top: 10px;
+#shards {
+    margin-top: 5px;
+    font-size: 1.2rem;
 }
 
 #result {
-    font-size: 2.5rem;
+    font-size: 2rem;
     margin-top: 10px;
     opacity: 0;
     transition: opacity 0.8s ease;
 }
+
+canvas {
+    display: block;
+    margin: 0 auto;
+    touch-action: none;
+}
 </style>
 </head>
+
 <body>
 
-<h1>⚡ Core Reactor Challenge ⚡</h1>
+<h1>💎 Energy Lock Breaker</h1>
 
 <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
 <button onclick="saveList()">Save List</button>
-<button onclick="startGame()">Start Challenge</button>
+<button onclick="startGame()">Start Game</button>
 
-<div id="charges">Charges: 0 / 5</div>
-<canvas id="gameCanvas" width="350" height="350"></canvas>
+<div id="shards">Shards: 0 / 5</div>
+<canvas id="gameCanvas"></canvas>
 <div id="result"></div>
 
 <script>
 let items = [];
-let charges = 0;
-let angle = 0;
-let speed = 0.05;
+let shards = 0;
+let nodes = [];
+let targetColor;
 let playing = false;
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const center = canvas.width / 2;
-const radius = 120;
 
-const targetStart = Math.PI * 1.6;
-const targetSize = 0.5;
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight * 0.55;
+}
+resizeCanvas();
+window.onresize = resizeCanvas;
 
 window.onload = () => {
-    const saved = localStorage.getItem("reactorItems");
+    const saved = localStorage.getItem("lockItems");
     if (saved) {
         items = JSON.parse(saved);
         document.getElementById("itemInput").value = items.join(", ");
     }
-    draw();
 };
 
 function saveList() {
     const input = document.getElementById("itemInput").value;
-    items = input.split(",").map(i => i.trim()).filter(i => i.length > 0);
+    items = input.split(",").map(i => i.trim()).filter(i => i);
     if (items.length === 0) return alert("Enter at least one item.");
-    localStorage.setItem("reactorItems", JSON.stringify(items));
+    localStorage.setItem("lockItems", JSON.stringify(items));
     alert("List saved!");
 }
 
 function startGame() {
     if (items.length === 0) return alert("Save your list first.");
-    charges = 0;
-    document.getElementById("charges").innerText = "Charges: 0 / 5";
+    shards = 0;
+    document.getElementById("shards").innerText = "Shards: 0 / 5";
     document.getElementById("result").style.opacity = 0;
+    nodes = [];
     playing = true;
-}
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const colors = ["#ff3b3b", "#3bff57", "#3b9bff", "#ffcc00", "#ff00ff"];
+    targetColor = colors[Math.floor(Math.random() * colors.length)];
 
-    // Core
-    ctx.beginPath();
-    ctx.arc(center, center, 60, 0, Math.PI * 2);
-    ctx.fillStyle = "#00ffff";
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = "#00ffff";
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Target zone
-    ctx.beginPath();
-    ctx.arc(center, center, radius, targetStart, targetStart + targetSize);
-    ctx.strokeStyle = "#00ff00";
-    ctx.lineWidth = 10;
-    ctx.stroke();
-
-    // Moving arc
-    ctx.beginPath();
-    ctx.arc(center, center, radius, angle, angle + 0.4);
-    ctx.strokeStyle = "#ffcc00";
-    ctx.lineWidth = 10;
-    ctx.stroke();
-
-    if (playing) {
-        angle += speed;
-        if (angle > Math.PI * 2) angle = 0;
+    for (let i = 0; i < 7; i++) {
+        nodes.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6,
+            radius: 25,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        });
     }
 
-    requestAnimationFrame(draw);
+    animate();
 }
 
-function checkHit() {
+function animate() {
     if (!playing) return;
 
-    let normalized = angle % (Math.PI * 2);
-    let success = normalized >= targetStart && normalized <= targetStart + targetSize;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (success) {
-        charges++;
-        document.getElementById("charges").innerText = "Charges: " + charges + " / 5";
-        speed += 0.01;
-    }
+    nodes.forEach(n => {
+        n.x += n.vx;
+        n.y += n.vy;
 
-    if (charges >= 5) {
-        unlock();
-        playing = false;
-        speed = 0.05;
-    }
+        if (n.x < n.radius || n.x > canvas.width - n.radius) n.vx *= -1;
+        if (n.y < n.radius || n.y > canvas.height - n.radius) n.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+        ctx.fillStyle = n.color;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = n.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    });
+
+    requestAnimationFrame(animate);
+}
+
+function checkHit(x, y) {
+    if (!playing) return;
+
+    nodes.forEach(n => {
+        const dist = Math.hypot(n.x - x, n.y - y);
+        if (dist < n.radius) {
+            if (n.color === targetColor) {
+                shards++;
+                document.getElementById("shards").innerText = "Shards: " + shards + " / 5";
+                n.vx *= 1.2;
+                n.vy *= 1.2;
+            } else {
+                shards = Math.max(0, shards - 1);
+                document.getElementById("shards").innerText = "Shards: " + shards + " / 5";
+            }
+
+            if (shards >= 5) unlock();
+        }
+    });
 }
 
 function unlock() {
+    playing = false;
     const randomItem = items[Math.floor(Math.random() * items.length)];
     const result = document.getElementById("result");
     result.innerText = "✨ " + randomItem + " ✨";
     result.style.opacity = 1;
 }
 
-canvas.addEventListener("click", checkHit);
-canvas.addEventListener("touchstart", function(e){
+canvas.addEventListener("click", e => {
+    const rect = canvas.getBoundingClientRect();
+    checkHit(e.clientX - rect.left, e.clientY - rect.top);
+});
+
+canvas.addEventListener("touchstart", e => {
     e.preventDefault();
-    checkHit();
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    checkHit(touch.clientX - rect.left, touch.clientY - rect.top);
 }, {passive:false});
 </script>
 
