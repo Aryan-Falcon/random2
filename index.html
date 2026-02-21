@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vault Runner v3</title>
+<title>Vault Runner v4</title>
 <style>
 body{
     margin:0;
@@ -47,7 +47,7 @@ canvas{
 </head>
 <body>
 
-<h1>🚀 Vault Runner v3</h1>
+<h1>🚀 Vault Runner v4</h1>
 
 <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
 <button onclick="saveList()">Save List</button>
@@ -69,7 +69,7 @@ resize();
 window.onresize=resize;
 
 window.onload=()=>{
-    const saved=localStorage.getItem("runnerItemsV3");
+    const saved=localStorage.getItem("runnerItemsV4");
     if(saved){
         items=JSON.parse(saved);
         document.getElementById("itemInput").value=items.join(", ");
@@ -80,56 +80,65 @@ function saveList(){
     const input=document.getElementById("itemInput").value;
     items=input.split(",").map(i=>i.trim()).filter(i=>i);
     if(items.length===0) return alert("Enter at least one item.");
-    localStorage.setItem("runnerItemsV3",JSON.stringify(items));
+    localStorage.setItem("runnerItemsV4",JSON.stringify(items));
     alert("List saved.");
 }
 
-let player,ground,speed,worldX,obstacles,finishX,checkpointX,playing;
-let jumpBuffer=0;
-let coyoteTime=0;
+let player,worldX,speed,playing;
+let platforms=[],spikes=[];
+let checkpointX,finishX;
+let jumpBuffer=0,coyoteTime=0;
 
 function startGame(){
-    if(items.length===0) return alert("Save your list first.");
+    if(items.length===0) return alert("Save list first.");
 
     document.getElementById("result").style.opacity=0;
 
-    ground=canvas.height-100;
-    player={
-        x:150,
-        y:ground-40,
-        w:40,
-        h:40,
-        vy:0,
-        rotation:0,
-        onGround:true
-    };
-
-    speed=5.5;
+    speed=5;
     worldX=0;
     playing=true;
     jumpBuffer=0;
     coyoteTime=0;
+
+    player={
+        x:150,
+        y:300,
+        w:40,
+        h:40,
+        vy:0,
+        rotation:0,
+        onGround:false
+    };
 
     generateLevel();
     gameLoop();
 }
 
 function generateLevel(){
-    obstacles=[];
-    let x=700;
-    const levelLength=7000;
+    platforms=[];
+    spikes=[];
+    let x=0;
+    const levelLength=6000;
+    const baseY=canvas.height-120;
 
     while(x<levelLength){
-        let pattern=Math.random();
+        let width=300+Math.random()*150;
+        let height=baseY - (Math.random()<0.3 ? 60 : 0);
 
-        if(pattern<0.6){
-            obstacles.push({x:x,width:40,height:40});
-            x+=320; // large safe landing
-        }else{
-            obstacles.push({x:x,width:40,height:40});
-            obstacles.push({x:x+55,width:40,height:40});
-            x+=360; // larger landing after double
+        platforms.push({x:x,y:height,w:width,h:20});
+
+        if(Math.random()<0.6){
+            let spikeCount=Math.random()<0.5?1:2;
+            for(let i=0;i<spikeCount;i++){
+                spikes.push({
+                    x:x+150+i*45,
+                    y:height,
+                    size:40
+                });
+            }
         }
+
+        x+=width+120;
     }
 
     checkpointX=levelLength/2;
@@ -140,111 +149,111 @@ function gameLoop(){
     if(!playing) return;
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
-
     worldX+=speed;
 
-    ctx.fillStyle="#222";
-    ctx.fillRect(0,ground,canvas.width,100);
-
-    // checkpoint marker
-    let cpScreen=checkpointX-worldX;
-    if(cpScreen>0 && cpScreen<canvas.width){
-        ctx.fillStyle="#ffaa00";
-        ctx.fillRect(cpScreen,ground-60,10,60);
-    }
-
-    // finish portal
-    let portalX=finishX-worldX;
-    if(portalX<canvas.width){
-        ctx.fillStyle="#00ff88";
-        ctx.beginPath();
-        ctx.arc(portalX,ground-40,30,0,Math.PI*2);
-        ctx.fill();
-    }
-
-    // physics
-    player.vy+=0.75;
+    player.vy+=0.8;
     player.y+=player.vy;
+    player.onGround=false;
 
-    if(player.y+player.h>=ground){
-        player.y=ground-player.h;
-        player.vy=0;
-        player.onGround=true;
-        coyoteTime=8;
-    }else{
-        player.onGround=false;
-        coyoteTime--;
-    }
+    platforms.forEach(p=>{
+        let screenX=p.x-worldX;
+
+        if(screenX>-p.w && screenX<canvas.width){
+            ctx.fillStyle="#222";
+            ctx.fillRect(screenX,p.y,p.w,p.h);
+
+            if(player.x+player.w>screenX &&
+               player.x<screenX+p.w &&
+               player.y+player.h>p.y &&
+               player.y+player.h<p.y+20 &&
+               player.vy>=0){
+                player.y=p.y-player.h;
+                player.vy=0;
+                player.onGround=true;
+                coyoteTime=8;
+            }
+        }
+    });
+
+    if(!player.onGround) coyoteTime--;
 
     if(jumpBuffer>0){
         if(player.onGround || coyoteTime>0){
             player.vy=-14;
-            player.onGround=false;
             jumpBuffer=0;
         }
         jumpBuffer--;
     }
 
-    // rotation like GD
     if(!player.onGround){
         player.rotation+=0.15;
     }else{
         player.rotation=0;
     }
 
-    // draw player
     ctx.save();
-    ctx.translate(player.x+player.w/2,player.y+player.h/2);
+    ctx.translate(player.x+20,player.y+20);
     ctx.rotate(player.rotation);
     ctx.fillStyle="#00f5ff";
     ctx.fillRect(-20,-20,40,40);
     ctx.restore();
 
-    // draw obstacles
-    ctx.fillStyle="#ff3b3b";
-    obstacles.forEach(o=>{
-        let screenX=o.x-worldX;
-        if(screenX>-50 && screenX<canvas.width+50){
+    spikes.forEach(s=>{
+        let screenX=s.x-worldX;
+        if(screenX>-50 && screenX<canvas.width){
             ctx.beginPath();
-            ctx.moveTo(screenX,ground);
-            ctx.lineTo(screenX+o.width/2,ground-o.height);
-            ctx.lineTo(screenX+o.width,ground);
+            ctx.moveTo(screenX,s.y);
+            ctx.lineTo(screenX+s.size/2,s.y-s.size);
+            ctx.lineTo(screenX+s.size,s.y);
             ctx.closePath();
+            ctx.fillStyle="#ff3b3b";
             ctx.fill();
 
-            if(player.x<screenX+o.width &&
-               player.x+player.w>screenX &&
-               player.y<ground &&
-               player.y+player.h>ground-o.height){
+            // Accurate triangle collision
+            if(pointInTriangle(
+                player.x+20,
+                player.y+20,
+                {x:screenX,y:s.y},
+                {x:screenX+s.size/2,y:s.y-s.size},
+                {x:screenX+s.size,y:s.y}
+            )){
                 death();
             }
         }
     });
 
-    if(player.x+player.w>portalX-20){
-        win();
-        return;
+    let portalX=finishX-worldX;
+    if(portalX<canvas.width){
+        ctx.fillStyle="#00ff88";
+        ctx.beginPath();
+        ctx.arc(portalX,canvas.height-160,30,0,Math.PI*2);
+        ctx.fill();
+
+        if(player.x+player.w>portalX-20){
+            win();
+            return;
+        }
     }
 
     requestAnimationFrame(gameLoop);
 }
 
+function pointInTriangle(px,py,a,b,c){
+    const area=(x1,y1,x2,y2,x3,y3)=>Math.abs((x1*(y2-y3)+x2*(y3-y1)+x3*(y1-y2))/2);
+    let A=area(a.x,a.y,b.x,b.y,c.x,c.y);
+    let A1=area(px,py,b.x,b.y,c.x,c.y);
+    let A2=area(a.x,a.y,px,py,c.x,c.y);
+    let A3=area(a.x,a.y,b.x,b.y,px,py);
+    return Math.abs(A-(A1+A2+A3))<1;
+}
+
 function jump(){
-    jumpBuffer=8; // allows buffered input
+    jumpBuffer=8;
 }
 
 function death(){
     playing=false;
-
-    if(worldX<checkpointX){
-        setTimeout(startGame,600);
-    }else{
-        worldX=checkpointX-200;
-        player.y=ground-40;
-        player.vy=0;
-        playing=true;
-        requestAnimationFrame(gameLoop);
-    }
+    setTimeout(startGame,700);
 }
 
 function win(){
