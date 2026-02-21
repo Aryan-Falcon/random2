@@ -2,57 +2,22 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vault Runner v5</title>
+<title>Vault Runner v6</title>
 <style>
-body{
-    margin:0;
-    background:#000;
-    font-family:Arial, sans-serif;
-    color:white;
-    text-align:center;
-    overflow:hidden;
-}
+body{margin:0;background:#000;color:white;font-family:Arial;text-align:center;overflow:hidden;}
 h1{margin:10px;}
-textarea{
-    width:80%;
-    max-width:500px;
-    height:70px;
-    border-radius:10px;
-    border:none;
-    padding:10px;
-    resize:none;
-}
-button{
-    margin:6px;
-    padding:10px 20px;
-    border-radius:20px;
-    border:none;
-    font-weight:bold;
-    cursor:pointer;
-    background:linear-gradient(45deg,#00f5ff,#7b2ff7);
-    color:white;
-}
-canvas{
-    display:block;
-    margin:0 auto;
-    background:linear-gradient(#111,#000);
-    touch-action:none;
-}
-#result{
-    font-size:2rem;
-    opacity:0;
-    transition:opacity 1s ease;
-}
+textarea{width:80%;max-width:500px;height:70px;border-radius:10px;border:none;padding:10px;resize:none;}
+button{margin:6px;padding:10px 20px;border-radius:20px;border:none;font-weight:bold;cursor:pointer;background:linear-gradient(45deg,#00f5ff,#7b2ff7);color:white;}
+canvas{display:block;margin:0 auto;background:linear-gradient(#111,#000);touch-action:none;}
+#result{font-size:2rem;opacity:0;transition:opacity 1s ease;}
 </style>
 </head>
 <body>
 
-<h1>🚀 Vault Runner v5</h1>
-
+<h1>🚀 Vault Runner v6</h1>
 <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
 <button onclick="saveList()">Save List</button>
 <button onclick="startGame()">Start Run</button>
-
 <canvas id="game"></canvas>
 <div id="result"></div>
 
@@ -61,26 +26,20 @@ let items=[];
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 
-function resize(){
-    canvas.width=window.innerWidth;
-    canvas.height=window.innerHeight*0.55;
-}
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight*0.55;}
 resize();
 window.onresize=resize;
 
 window.onload=()=>{
-    const saved=localStorage.getItem("runnerItemsV5");
-    if(saved){
-        items=JSON.parse(saved);
-        document.getElementById("itemInput").value=items.join(", ");
-    }
+    const saved=localStorage.getItem("runnerItemsV6");
+    if(saved){items=JSON.parse(saved);document.getElementById("itemInput").value=items.join(", ");}
 };
 
 function saveList(){
     const input=document.getElementById("itemInput").value;
     items=input.split(",").map(i=>i.trim()).filter(i=>i);
     if(items.length===0) return alert("Enter at least one item.");
-    localStorage.setItem("runnerItemsV5",JSON.stringify(items));
+    localStorage.setItem("runnerItemsV6",JSON.stringify(items));
     alert("List saved.");
 }
 
@@ -91,7 +50,6 @@ let jumpBuffer=0,coyoteTime=0;
 
 function startGame(){
     if(items.length===0) return alert("Save list first.");
-
     document.getElementById("result").style.opacity=0;
 
     speed=5;
@@ -103,21 +61,12 @@ function startGame(){
 
     generateLevel();
     spawnPlayer(0);
-
     gameLoop();
 }
 
 function spawnPlayer(atWorldX){
     const groundY=canvas.height-100;
-    player={
-        x:150,
-        y:groundY-40,
-        w:40,
-        h:40,
-        vy:0,
-        rotation:0,
-        onGround:false
-    };
+    player={x:150,y:groundY-40,w:40,h:40,vy:0,rotation:0,onGround:false};
     worldX=atWorldX;
 }
 
@@ -130,39 +79,43 @@ function generateLevel(){
 
     // Starting ground
     platforms.push({x:0,y:groundY,w:800,h:100});
-
     x=800;
 
     while(x<levelLength){
-        let elevated=Math.random()<0.4;
-        let height=elevated?groundY-120:groundY;
-        let width=400;
+        // reachable distance
+        let maxGap=playerJumpDistance(); // maximum distance cube can jump
+        let gap=150+Math.random()*maxGap*0.6; // slightly variable
+        let width=300+Math.random()*100;
+        let height=groundY-(Math.random()<0.4?60:0); // small elevation difference
 
-        platforms.push({x:x,y:height,w:width,h:100});
+        platforms.push({x:x+gap,y:height,w:width,h:100});
 
+        // spikes
         if(Math.random()<0.6){
             let count=Math.random()<0.5?1:2;
             for(let i=0;i<count;i++){
-                spikes.push({
-                    x:x+200+i*50,
-                    y:height,
-                    size:40
-                });
+                spikes.push({x:x+gap+150+i*50,y:height,size:40});
             }
         }
 
-        x+=width+200;
+        x+=gap+width;
     }
 
     checkpointX=levelLength/2;
     finishX=levelLength+300;
 }
 
+function playerJumpDistance(){
+    // physics formula: v^2/(2*g) + horizontal speed*t_jump
+    let vy=-14; let g=0.8;
+    let tUp=Math.abs(vy/g);
+    let tTotal=tUp*2;
+    return speed*tTotal*0.9; // 90% to be safe
+}
+
 function gameLoop(){
     if(!playing) return;
-
     ctx.clearRect(0,0,canvas.width,canvas.height);
-
     worldX+=speed;
 
     player.vy+=0.8;
@@ -171,16 +124,11 @@ function gameLoop(){
 
     platforms.forEach(p=>{
         let screenX=p.x-worldX;
-
         if(screenX>-p.w && screenX<canvas.width){
             ctx.fillStyle="#222";
             ctx.fillRect(screenX,p.y,p.w,p.h);
-
-            if(player.x+player.w>screenX &&
-               player.x<screenX+p.w &&
-               player.y+player.h>p.y &&
-               player.y+player.h<p.y+20 &&
-               player.vy>=0){
+            if(player.x+player.w>screenX && player.x<screenX+p.w &&
+               player.y+player.h>p.y && player.y+player.h<p.y+20 && player.vy>=0){
                 player.y=p.y-player.h;
                 player.vy=0;
                 player.onGround=true;
@@ -189,22 +137,13 @@ function gameLoop(){
         }
     });
 
-    if(!player.onGround) coyoteTime--;
-
+    if(!player.onGround)coyoteTime--;
     if(jumpBuffer>0){
-        if(player.onGround || coyoteTime>0){
-            player.vy=-14;
-            jumpBuffer=0;
-        }
+        if(player.onGround || coyoteTime>0){player.vy=-14;jumpBuffer=0;}
         jumpBuffer--;
     }
 
-    if(!player.onGround){
-        player.rotation+=0.15;
-    }else{
-        player.rotation=0;
-    }
-
+    player.rotation=player.onGround?0:player.rotation+0.15;
     ctx.save();
     ctx.translate(player.x+20,player.y+20);
     ctx.rotate(player.rotation);
@@ -223,20 +162,13 @@ function gameLoop(){
             ctx.fillStyle="#ff3b3b";
             ctx.fill();
 
-            if(player.x+10<screenX+s.size &&
-               player.x+player.w-10>screenX &&
-               player.y+player.h> s.y-s.size){
-                death();
-            }
+            if(player.x+10<screenX+s.size && player.x+player.w-10>screenX &&
+               player.y+player.h> s.y-s.size) death();
         }
     });
 
     // checkpoint
-    if(worldX>checkpointX){
-        spawnX=checkpointX-200;
-        ctx.fillStyle="#ffaa00";
-        ctx.fillRect(checkpointX-worldX,canvas.height-200,10,100);
-    }
+    if(worldX>checkpointX) spawnX=checkpointX-200;
 
     // finish portal
     let portalX=finishX-worldX;
@@ -245,42 +177,18 @@ function gameLoop(){
         ctx.beginPath();
         ctx.arc(portalX,canvas.height-140,30,0,Math.PI*2);
         ctx.fill();
-
-        if(player.x+player.w>portalX-20){
-            win();
-            return;
-        }
+        if(player.x+player.w>portalX-20) win();
     }
 
     requestAnimationFrame(gameLoop);
 }
 
-function jump(){
-    jumpBuffer=8;
-}
-
-function death(){
-    playing=false;
-    setTimeout(()=>{
-        spawnPlayer(spawnX);
-        playing=true;
-        gameLoop();
-    },700);
-}
-
-function win(){
-    playing=false;
-    let randomItem=items[Math.floor(Math.random()*items.length)];
-    let result=document.getElementById("result");
-    result.innerText="✨ "+randomItem+" ✨";
-    result.style.opacity=1;
-}
+function jump(){jumpBuffer=8;}
+function death(){playing=false;setTimeout(()=>{spawnPlayer(spawnX);playing=true;gameLoop();},700);}
+function win(){playing=false;let randomItem=items[Math.floor(Math.random()*items.length)];document.getElementById("result").innerText="✨ "+randomItem+" ✨";document.getElementById("result").style.opacity=1;}
 
 canvas.addEventListener("click",jump);
-canvas.addEventListener("touchstart",e=>{
-    e.preventDefault();
-    jump();
-},{passive:false});
+canvas.addEventListener("touchstart",e=>{e.preventDefault();jump();},{passive:false});
 </script>
 
 </body>
