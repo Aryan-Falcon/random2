@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vault Runner v7</title>
+<title>Vault Runner v7.1</title>
 <style>
 body{margin:0;background:#000;color:white;font-family:Arial;text-align:center;overflow:hidden;}
 h1{margin:10px;}
@@ -14,7 +14,7 @@ canvas{display:block;margin:0 auto;background:linear-gradient(#111,#000);touch-a
 </head>
 <body>
 
-<h1>🚀 Vault Runner v7</h1>
+<h1>🚀 Vault Runner v7.1</h1>
 
 <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
 <button onclick="saveList()">Save List</button>
@@ -33,7 +33,7 @@ resize();
 window.onresize=resize;
 
 window.onload=()=>{
-    const saved=localStorage.getItem("runnerItemsV7");
+    const saved=localStorage.getItem("runnerItemsV7.1");
     if(saved){items=JSON.parse(saved);document.getElementById("itemInput").value=items.join(", ");}
 };
 
@@ -41,7 +41,7 @@ function saveList(){
     const input=document.getElementById("itemInput").value;
     items=input.split(",").map(i=>i.trim()).filter(i=>i);
     if(items.length===0) return alert("Enter at least one item.");
-    localStorage.setItem("runnerItemsV7",JSON.stringify(items));
+    localStorage.setItem("runnerItemsV7.1",JSON.stringify(items));
     alert("List saved.");
 }
 
@@ -108,10 +108,11 @@ function generateLevel(){
 }
 
 function playerJumpDistance(){
-    let vy=-14; let g=0.8;
+    let vy=-16;   // stronger jump
+    let g=0.75;   // slightly lighter gravity
     let tUp=Math.abs(vy/g);
     let tTotal=tUp*2;
-    return speed*tTotal*0.9;
+    return speed*tTotal*0.95;
 }
 
 function gameLoop(){
@@ -119,7 +120,7 @@ function gameLoop(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     worldX+=speed;
 
-    player.vy+=0.8;
+    player.vy+=0.75;
     player.y+=player.vy;
     player.onGround=false;
 
@@ -140,7 +141,7 @@ function gameLoop(){
 
     if(!player.onGround)coyoteTime--;
     if(jumpBuffer>0){
-        if(player.onGround || coyoteTime>0){player.vy=-14;jumpBuffer=0;}
+        if(player.onGround || coyoteTime>0){player.vy=-16;jumpBuffer=0;}
         jumpBuffer--;
     }
 
