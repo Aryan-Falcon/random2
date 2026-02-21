@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Vault of Trials</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Core Reactor Challenge</title>
 
 <style>
 body {
     margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: radial-gradient(circle at center, #0f2027, #203a43, #2c5364);
+    font-family: Arial, sans-serif;
+    background: radial-gradient(circle at center, #0f0f0f, #000);
     color: white;
     text-align: center;
     overflow: hidden;
@@ -17,15 +17,11 @@ body {
 
 h1 {
     margin-top: 15px;
-    font-size: 2.3rem;
-}
-
-#inputSection {
-    margin: 15px;
 }
 
 textarea {
-    width: 60%;
+    width: 80%;
+    max-width: 500px;
     height: 80px;
     border-radius: 10px;
     border: none;
@@ -35,151 +31,151 @@ textarea {
 }
 
 button {
+    margin: 10px;
     padding: 12px 25px;
     border-radius: 25px;
     border: none;
-    background: linear-gradient(45deg, #ff512f, #dd2476);
-    color: white;
     font-weight: bold;
     cursor: pointer;
-    margin: 10px;
-    transition: 0.2s;
+    background: linear-gradient(45deg, #00c6ff, #0072ff);
+    color: white;
 }
 
-button:hover {
-    transform: scale(1.05);
+#gameCanvas {
+    margin-top: 20px;
+    touch-action: manipulation;
 }
 
-#gameArea {
-    position: relative;
-    width: 100%;
-    height: 55vh;
-}
-
-#targetZone {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 120px;
-    height: 120px;
-    transform: translate(-50%, -50%);
-    border: 4px solid white;
-    border-radius: 50%;
-    box-shadow: 0 0 20px white;
-}
-
-#movingCircle {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 350px;
-    height: 350px;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: rgba(255,255,255,0.1);
-    border: 4px solid #ffcc00;
-    transition: width 2.5s linear, height 2.5s linear;
-}
-
-#stars {
-    font-size: 1.5rem;
+#charges {
+    font-size: 1.3rem;
     margin-top: 10px;
 }
 
-#vault {
-    font-size: 3rem;
-    margin-top: 15px;
+#result {
+    font-size: 2.5rem;
+    margin-top: 10px;
     opacity: 0;
-    transition: opacity 1s ease;
+    transition: opacity 0.8s ease;
 }
 </style>
 </head>
-
 <body>
 
-<h1>🔐 Vault of Trials</h1>
+<h1>⚡ Core Reactor Challenge ⚡</h1>
 
-<div id="inputSection">
-    <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
-    <button onclick="saveList()">Save List</button>
-    <button onclick="startGame()">Start Trial</button>
-</div>
+<textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
+<button onclick="saveList()">Save List</button>
+<button onclick="startGame()">Start Challenge</button>
 
-<div id="stars">Stars: 0 ⭐</div>
-
-<div id="gameArea">
-    <div id="targetZone"></div>
-    <div id="movingCircle"></div>
-</div>
-
-<div id="vault"></div>
+<div id="charges">Charges: 0 / 5</div>
+<canvas id="gameCanvas" width="350" height="350"></canvas>
+<div id="result"></div>
 
 <script>
 let items = [];
-let stars = 0;
-let gameActive = false;
+let charges = 0;
+let angle = 0;
+let speed = 0.05;
+let playing = false;
 
-window.onload = function() {
-    const saved = localStorage.getItem("vaultItems");
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const center = canvas.width / 2;
+const radius = 120;
+
+const targetStart = Math.PI * 1.6;
+const targetSize = 0.5;
+
+window.onload = () => {
+    const saved = localStorage.getItem("reactorItems");
     if (saved) {
         items = JSON.parse(saved);
         document.getElementById("itemInput").value = items.join(", ");
     }
+    draw();
 };
 
 function saveList() {
     const input = document.getElementById("itemInput").value;
     items = input.split(",").map(i => i.trim()).filter(i => i.length > 0);
     if (items.length === 0) return alert("Enter at least one item.");
-    localStorage.setItem("vaultItems", JSON.stringify(items));
+    localStorage.setItem("reactorItems", JSON.stringify(items));
     alert("List saved!");
 }
 
 function startGame() {
-    if (items.length === 0) return alert("Save a list first.");
-    if (gameActive) return;
+    if (items.length === 0) return alert("Save your list first.");
+    charges = 0;
+    document.getElementById("charges").innerText = "Charges: 0 / 5";
+    document.getElementById("result").style.opacity = 0;
+    playing = true;
+}
 
-    document.getElementById("vault").style.opacity = 0;
-    gameActive = true;
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const circle = document.getElementById("movingCircle");
-    circle.style.width = "350px";
-    circle.style.height = "350px";
+    // Core
+    ctx.beginPath();
+    ctx.arc(center, center, 60, 0, Math.PI * 2);
+    ctx.fillStyle = "#00ffff";
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#00ffff";
+    ctx.fill();
+    ctx.shadowBlur = 0;
 
-    setTimeout(() => {
-        circle.style.width = "60px";
-        circle.style.height = "60px";
-    }, 50);
+    // Target zone
+    ctx.beginPath();
+    ctx.arc(center, center, radius, targetStart, targetStart + targetSize);
+    ctx.strokeStyle = "#00ff00";
+    ctx.lineWidth = 10;
+    ctx.stroke();
 
-    circle.onclick = checkHit;
+    // Moving arc
+    ctx.beginPath();
+    ctx.arc(center, center, radius, angle, angle + 0.4);
+    ctx.strokeStyle = "#ffcc00";
+    ctx.lineWidth = 10;
+    ctx.stroke();
+
+    if (playing) {
+        angle += speed;
+        if (angle > Math.PI * 2) angle = 0;
+    }
+
+    requestAnimationFrame(draw);
 }
 
 function checkHit() {
-    if (!gameActive) return;
+    if (!playing) return;
 
-    const circle = document.getElementById("movingCircle");
-    const size = circle.offsetWidth;
+    let normalized = angle % (Math.PI * 2);
+    let success = normalized >= targetStart && normalized <= targetStart + targetSize;
 
-    if (size <= 140 && size >= 100) {
-        stars++;
-        document.getElementById("stars").innerText = "Stars: " + stars + " ⭐";
+    if (success) {
+        charges++;
+        document.getElementById("charges").innerText = "Charges: " + charges + " / 5";
+        speed += 0.01;
     }
 
-    gameActive = false;
-
-    if (stars >= 5) {
-        unlockVault();
+    if (charges >= 5) {
+        unlock();
+        playing = false;
+        speed = 0.05;
     }
 }
 
-function unlockVault() {
+function unlock() {
     const randomItem = items[Math.floor(Math.random() * items.length)];
-    const vault = document.getElementById("vault");
-    vault.innerText = "✨ " + randomItem + " ✨";
-    vault.style.opacity = 1;
-    stars = 0;
-    document.getElementById("stars").innerText = "Stars: 0 ⭐";
+    const result = document.getElementById("result");
+    result.innerText = "✨ " + randomItem + " ✨";
+    result.style.opacity = 1;
 }
+
+canvas.addEventListener("click", checkHit);
+canvas.addEventListener("touchstart", function(e){
+    e.preventDefault();
+    checkHit();
+}, {passive:false});
 </script>
 
 </body>
