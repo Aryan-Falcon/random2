@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vault Runner v4</title>
+<title>Vault Runner v5</title>
 <style>
 body{
     margin:0;
@@ -47,7 +47,7 @@ canvas{
 </head>
 <body>
 
-<h1>🚀 Vault Runner v4</h1>
+<h1>🚀 Vault Runner v5</h1>
 
 <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
 <button onclick="saveList()">Save List</button>
@@ -58,8 +58,8 @@ canvas{
 
 <script>
 let items=[];
-let canvas=document.getElementById("game");
-let ctx=canvas.getContext("2d");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
 
 function resize(){
     canvas.width=window.innerWidth;
@@ -69,7 +69,7 @@ resize();
 window.onresize=resize;
 
 window.onload=()=>{
-    const saved=localStorage.getItem("runnerItemsV4");
+    const saved=localStorage.getItem("runnerItemsV5");
     if(saved){
         items=JSON.parse(saved);
         document.getElementById("itemInput").value=items.join(", ");
@@ -80,13 +80,13 @@ function saveList(){
     const input=document.getElementById("itemInput").value;
     items=input.split(",").map(i=>i.trim()).filter(i=>i);
     if(items.length===0) return alert("Enter at least one item.");
-    localStorage.setItem("runnerItemsV4",JSON.stringify(items));
+    localStorage.setItem("runnerItemsV5",JSON.stringify(items));
     alert("List saved.");
 }
 
 let player,worldX,speed,playing;
 let platforms=[],spikes=[];
-let checkpointX,finishX;
+let checkpointX,finishX,spawnX;
 let jumpBuffer=0,coyoteTime=0;
 
 function startGame(){
@@ -96,59 +96,73 @@ function startGame(){
 
     speed=5;
     worldX=0;
+    spawnX=0;
     playing=true;
     jumpBuffer=0;
     coyoteTime=0;
 
+    generateLevel();
+    spawnPlayer(0);
+
+    gameLoop();
+}
+
+function spawnPlayer(atWorldX){
+    const groundY=canvas.height-100;
     player={
         x:150,
-        y:300,
+        y:groundY-40,
         w:40,
         h:40,
         vy:0,
         rotation:0,
         onGround:false
     };
-
-    generateLevel();
-    gameLoop();
+    worldX=atWorldX;
 }
 
 function generateLevel(){
     platforms=[];
     spikes=[];
+    const groundY=canvas.height-100;
+    const levelLength=6500;
     let x=0;
-    const levelLength=6000;
-    const baseY=canvas.height-120;
+
+    // Starting ground
+    platforms.push({x:0,y:groundY,w:800,h:100});
+
+    x=800;
 
     while(x<levelLength){
-        let width=300+Math.random()*150;
-        let height=baseY - (Math.random()<0.3 ? 60 : 0);
+        let elevated=Math.random()<0.4;
+        let height=elevated?groundY-120:groundY;
+        let width=400;
 
-        platforms.push({x:x,y:height,w:width,h:20});
+        platforms.push({x:x,y:height,w:width,h:100});
 
         if(Math.random()<0.6){
-            let spikeCount=Math.random()<0.5?1:2;
-            for(let i=0;i<spikeCount;i++){
+            let count=Math.random()<0.5?1:2;
+            for(let i=0;i<count;i++){
                 spikes.push({
-                    x:x+150+i*45,
+                    x:x+200+i*50,
                     y:height,
                     size:40
                 });
             }
         }
 
-        x+=width+120;
+        x+=width+200;
     }
 
     checkpointX=levelLength/2;
-    finishX=levelLength+200;
+    finishX=levelLength+300;
 }
 
 function gameLoop(){
     if(!playing) return;
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
+
     worldX+=speed;
 
     player.vy+=0.8;
@@ -209,24 +223,27 @@ function gameLoop(){
             ctx.fillStyle="#ff3b3b";
             ctx.fill();
 
-            // Accurate triangle collision
-            if(pointInTriangle(
-                player.x+20,
-                player.y+20,
-                {x:screenX,y:s.y},
-                {x:screenX+s.size/2,y:s.y-s.size},
-                {x:screenX+s.size,y:s.y}
-            )){
+            if(player.x+10<screenX+s.size &&
+               player.x+player.w-10>screenX &&
+               player.y+player.h> s.y-s.size){
                 death();
             }
         }
     });
 
+    // checkpoint
+    if(worldX>checkpointX){
+        spawnX=checkpointX-200;
+        ctx.fillStyle="#ffaa00";
+        ctx.fillRect(checkpointX-worldX,canvas.height-200,10,100);
+    }
+
+    // finish portal
     let portalX=finishX-worldX;
     if(portalX<canvas.width){
         ctx.fillStyle="#00ff88";
         ctx.beginPath();
-        ctx.arc(portalX,canvas.height-160,30,0,Math.PI*2);
+        ctx.arc(portalX,canvas.height-140,30,0,Math.PI*2);
         ctx.fill();
 
         if(player.x+player.w>portalX-20){
@@ -238,22 +255,17 @@ function gameLoop(){
     requestAnimationFrame(gameLoop);
 }
 
-function pointInTriangle(px,py,a,b,c){
-    const area=(x1,y1,x2,y2,x3,y3)=>Math.abs((x1*(y2-y3)+x2*(y3-y1)+x3*(y1-y2))/2);
-    let A=area(a.x,a.y,b.x,b.y,c.x,c.y);
-    let A1=area(px,py,b.x,b.y,c.x,c.y);
-    let A2=area(a.x,a.y,px,py,c.x,c.y);
-    let A3=area(a.x,a.y,b.x,b.y,px,py);
-    return Math.abs(A-(A1+A2+A3))<1;
-}
-
 function jump(){
     jumpBuffer=8;
 }
 
 function death(){
     playing=false;
-    setTimeout(startGame,700);
+    setTimeout(()=>{
+        spawnPlayer(spawnX);
+        playing=true;
+        gameLoop();
+    },700);
 }
 
 function win(){
