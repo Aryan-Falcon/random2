@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vault Runner v6</title>
+<title>Vault Runner v7</title>
 <style>
 body{margin:0;background:#000;color:white;font-family:Arial;text-align:center;overflow:hidden;}
 h1{margin:10px;}
@@ -14,10 +14,12 @@ canvas{display:block;margin:0 auto;background:linear-gradient(#111,#000);touch-a
 </head>
 <body>
 
-<h1>🚀 Vault Runner v6</h1>
+<h1>🚀 Vault Runner v7</h1>
+
 <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
 <button onclick="saveList()">Save List</button>
 <button onclick="startGame()">Start Run</button>
+
 <canvas id="game"></canvas>
 <div id="result"></div>
 
@@ -31,7 +33,7 @@ resize();
 window.onresize=resize;
 
 window.onload=()=>{
-    const saved=localStorage.getItem("runnerItemsV6");
+    const saved=localStorage.getItem("runnerItemsV7");
     if(saved){items=JSON.parse(saved);document.getElementById("itemInput").value=items.join(", ");}
 };
 
@@ -39,7 +41,7 @@ function saveList(){
     const input=document.getElementById("itemInput").value;
     items=input.split(",").map(i=>i.trim()).filter(i=>i);
     if(items.length===0) return alert("Enter at least one item.");
-    localStorage.setItem("runnerItemsV6",JSON.stringify(items));
+    localStorage.setItem("runnerItemsV7",JSON.stringify(items));
     alert("List saved.");
 }
 
@@ -82,11 +84,11 @@ function generateLevel(){
     x=800;
 
     while(x<levelLength){
-        // reachable distance
-        let maxGap=playerJumpDistance(); // maximum distance cube can jump
-        let gap=150+Math.random()*maxGap*0.6; // slightly variable
-        let width=300+Math.random()*100;
-        let height=groundY-(Math.random()<0.4?60:0); // small elevation difference
+        let maxJump=playerJumpDistance();
+        // tighter spacing for reachable jumps
+        let gap=100 + Math.random()* (maxJump*0.4); // smaller gap
+        let width=250 + Math.random()*100;
+        let height=groundY-(Math.random()<0.4?60:0);
 
         platforms.push({x:x+gap,y:height,w:width,h:100});
 
@@ -94,7 +96,7 @@ function generateLevel(){
         if(Math.random()<0.6){
             let count=Math.random()<0.5?1:2;
             for(let i=0;i<count;i++){
-                spikes.push({x:x+gap+150+i*50,y:height,size:40});
+                spikes.push({x:x+gap+100+i*50,y:height,size:40});
             }
         }
 
@@ -106,11 +108,10 @@ function generateLevel(){
 }
 
 function playerJumpDistance(){
-    // physics formula: v^2/(2*g) + horizontal speed*t_jump
     let vy=-14; let g=0.8;
     let tUp=Math.abs(vy/g);
     let tTotal=tUp*2;
-    return speed*tTotal*0.9; // 90% to be safe
+    return speed*tTotal*0.9;
 }
 
 function gameLoop(){
