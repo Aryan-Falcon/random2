@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vault Runner v7.1</title>
+<title>Vault Runner v8 - Easier Edition</title>
 <style>
 body{margin:0;background:#000;color:white;font-family:Arial;text-align:center;overflow:hidden;}
 h1{margin:10px;}
@@ -14,7 +14,7 @@ canvas{display:block;margin:0 auto;background:linear-gradient(#111,#000);touch-a
 </head>
 <body>
 
-<h1>🚀 Vault Runner v7.1</h1>
+<h1>🚀 Vault Runner v8</h1>
 
 <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
 <button onclick="saveList()">Save List</button>
@@ -33,7 +33,7 @@ resize();
 window.onresize=resize;
 
 window.onload=()=>{
-    const saved=localStorage.getItem("runnerItemsV7.1");
+    const saved=localStorage.getItem("runnerItemsV8");
     if(saved){items=JSON.parse(saved);document.getElementById("itemInput").value=items.join(", ");}
 };
 
@@ -41,7 +41,7 @@ function saveList(){
     const input=document.getElementById("itemInput").value;
     items=input.split(",").map(i=>i.trim()).filter(i=>i);
     if(items.length===0) return alert("Enter at least one item.");
-    localStorage.setItem("runnerItemsV7.1",JSON.stringify(items));
+    localStorage.setItem("runnerItemsV8",JSON.stringify(items));
     alert("List saved.");
 }
 
@@ -76,27 +76,26 @@ function generateLevel(){
     platforms=[];
     spikes=[];
     const groundY=canvas.height-100;
-    const levelLength=6500;
+    const levelLength=6000;
     let x=0;
 
     // Starting ground
-    platforms.push({x:0,y:groundY,w:800,h:100});
-    x=800;
+    platforms.push({x:0,y:groundY,w:1200,h:100});
+    x=1200;
 
     while(x<levelLength){
-        let maxJump=playerJumpDistance();
-        // tighter spacing for reachable jumps
-        let gap=100 + Math.random()* (maxJump*0.4); // smaller gap
-        let width=250 + Math.random()*100;
-        let height=groundY-(Math.random()<0.4?60:0);
+        // Easier layout: larger platforms, smaller gaps
+        let width=500 + Math.random()*200; // larger platforms
+        let gap=80 + Math.random()*50;      // smaller gaps
+        let height=groundY-(Math.random()<0.3?50:0); // small elevation variation
 
         platforms.push({x:x+gap,y:height,w:width,h:100});
 
-        // spikes
-        if(Math.random()<0.6){
+        // spikes: single or double, spaced out
+        if(Math.random()<0.5){
             let count=Math.random()<0.5?1:2;
             for(let i=0;i<count;i++){
-                spikes.push({x:x+gap+100+i*50,y:height,size:40});
+                spikes.push({x:x+gap+100+i*60,y:height,size:40}); // more space between double spikes
             }
         }
 
@@ -108,8 +107,8 @@ function generateLevel(){
 }
 
 function playerJumpDistance(){
-    let vy=-16;   // stronger jump
-    let g=0.75;   // slightly lighter gravity
+    let vy=-16;
+    let g=0.75;
     let tUp=Math.abs(vy/g);
     let tTotal=tUp*2;
     return speed*tTotal*0.95;
@@ -169,10 +168,8 @@ function gameLoop(){
         }
     });
 
-    // checkpoint
     if(worldX>checkpointX) spawnX=checkpointX-200;
 
-    // finish portal
     let portalX=finishX-worldX;
     if(portalX<canvas.width){
         ctx.fillStyle="#00ff88";
