@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vault Runner</title>
+<title>Vault Runner v2</title>
 <style>
 body{
     margin:0;
@@ -47,7 +47,7 @@ canvas{
 </head>
 <body>
 
-<h1>🚀 Vault Runner</h1>
+<h1>🚀 Vault Runner v2</h1>
 
 <textarea id="itemInput" placeholder="Enter items separated by commas..."></textarea><br>
 <button onclick="saveList()">Save List</button>
@@ -69,7 +69,7 @@ resize();
 window.onresize=resize;
 
 window.onload=()=>{
-    const saved=localStorage.getItem("runnerItems");
+    const saved=localStorage.getItem("runnerItemsV2");
     if(saved){
         items=JSON.parse(saved);
         document.getElementById("itemInput").value=items.join(", ");
@@ -80,34 +80,48 @@ function saveList(){
     const input=document.getElementById("itemInput").value;
     items=input.split(",").map(i=>i.trim()).filter(i=>i);
     if(items.length===0) return alert("Enter at least one item.");
-    localStorage.setItem("runnerItems",JSON.stringify(items));
+    localStorage.setItem("runnerItemsV2",JSON.stringify(items));
     alert("List saved.");
 }
 
-let player,gravity=0.7,ground,obstacles=[],speed,timeSurvived,playing;
+let player,ground,speed,worldX,obstacles,finishX,playing;
 
 function startGame(){
     if(items.length===0) return alert("Save your list first.");
+
     document.getElementById("result").style.opacity=0;
-    ground=canvas.height-60;
-    player={x:120,y:ground-40,w:40,h:40,vy:0,jumping:false};
-    obstacles=[];
+
+    ground=canvas.height-80;
+    player={x:150,y:ground-40,w:40,h:40,vy:0,jumping:false};
     speed=6;
-    timeSurvived=0;
+    worldX=0;
     playing=true;
-    spawnObstacle();
+
+    generateLevel();
     gameLoop();
 }
 
-function spawnObstacle(){
-    let height=30+Math.random()*40;
-    obstacles.push({
-        x:canvas.width+50,
-        y:ground-height,
-        w:30+Math.random()*20,
-        h:height
-    });
-    setTimeout(spawnObstacle,1000+Math.random()*800);
+function generateLevel(){
+    obstacles=[];
+    let x=600;
+    const levelLength=6000;
+
+    while(x<levelLength){
+        let pattern=Math.random();
+
+        if(pattern<0.5){
+            // Single spike
+            obstacles.push({x:x,width:40,height:40});
+            x+=200; // guaranteed landing space
+        }else{
+            // Double spike max
+            obstacles.push({x:x,width:40,height:40});
+            obstacles.push({x:x+50,width:40,height:40});
+            x+=260; // safe space after double
+        }
+    }
+
+    finishX=levelLength+200;
 }
 
 function gameLoop(){
@@ -115,13 +129,16 @@ function gameLoop(){
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
+    worldX+=speed;
+
     // ground
     ctx.fillStyle="#222";
-    ctx.fillRect(0,ground,canvas.width,60);
+    ctx.fillRect(0,ground,canvas.width,80);
 
     // player physics
-    player.vy+=gravity;
+    player.vy+=0.8;
     player.y+=player.vy;
+
     if(player.y+player.h>ground){
         player.y=ground-player.h;
         player.vy=0;
@@ -130,44 +147,45 @@ function gameLoop(){
 
     // draw player
     ctx.fillStyle="#00f5ff";
-    ctx.shadowBlur=20;
+    ctx.shadowBlur=15;
     ctx.shadowColor="#00f5ff";
     ctx.fillRect(player.x,player.y,player.w,player.h);
     ctx.shadowBlur=0;
 
-    // obstacles
+    // draw obstacles
     ctx.fillStyle="#ff3b3b";
     obstacles.forEach(o=>{
-        o.x-=speed;
-        ctx.beginPath();
-        ctx.moveTo(o.x,o.y+o.h);
-        ctx.lineTo(o.x+o.w/2,o.y);
-        ctx.lineTo(o.x+o.w,o.y+o.h);
-        ctx.closePath();
-        ctx.fill();
+        let screenX=o.x-worldX;
+        if(screenX>-50 && screenX<canvas.width+50){
+            ctx.beginPath();
+            ctx.moveTo(screenX,ground);
+            ctx.lineTo(screenX+o.width/2,ground-o.height);
+            ctx.lineTo(screenX+o.width,ground);
+            ctx.closePath();
+            ctx.fill();
 
-        // collision
-        if(player.x<o.x+o.w &&
-           player.x+player.w>o.x &&
-           player.y<o.y+o.h &&
-           player.y+player.h>o.y){
-            explode();
+            // collision
+            if(player.x<screenX+o.width &&
+               player.x+player.w>screenX &&
+               player.y<ground &&
+               player.y+player.h>ground-o.height){
+                restart();
+            }
         }
     });
 
-    obstacles=obstacles.filter(o=>o.x+o.w>0);
+    // finish portal
+    let portalX=finishX-worldX;
+    if(portalX<canvas.width){
+        ctx.fillStyle="#00ff88";
+        ctx.beginPath();
+        ctx.arc(portalX,ground-40,30,0,Math.PI*2);
+        ctx.fill();
 
-    timeSurvived+=1/60;
-    speed+=0.001;
-
-    // progress bar
-    let progress=Math.min(timeSurvived/20,1);
-    ctx.fillStyle="#00ff88";
-    ctx.fillRect(0,10,canvas.width*progress,10);
-
-    if(progress>=1){
-        win();
-        return;
+        if(player.x+player.w>portalX-20){
+            win();
+            return;
+        }
     }
 
     requestAnimationFrame(gameLoop);
@@ -175,22 +193,14 @@ function gameLoop(){
 
 function jump(){
     if(!player.jumping && playing){
-        player.vy=-14;
+        player.vy=-15;
         player.jumping=true;
     }
 }
 
-function explode(){
+function restart(){
     playing=false;
-    for(let i=0;i<30;i++){
-        ctx.fillStyle="orange";
-        ctx.fillRect(
-            player.x+Math.random()*40,
-            player.y+Math.random()*40,
-            4,4
-        );
-    }
-    setTimeout(startGame,1000);
+    setTimeout(startGame,600);
 }
 
 function win(){
