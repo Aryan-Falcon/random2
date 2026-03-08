@@ -10,7 +10,10 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);color:#fff;font-family:'Rajdhani',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.06) 3px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:999;}
-#setup{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:480px;padding:20px 16px;animation:fadeUp .4s ease;}
+#setup{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:480px;padding:20px 16px 32px;animation:fadeUp .4s ease;max-height:100vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,240,255,0.2) transparent;}
+#setup::-webkit-scrollbar{width:4px;}
+#setup::-webkit-scrollbar-track{background:transparent;}
+#setup::-webkit-scrollbar-thumb{background:rgba(0,240,255,0.2);border-radius:2px;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 .logo{font-family:'Press Start 2P',monospace;font-size:24px;letter-spacing:3px;text-align:center;line-height:1.6;}
 .logo .geo{color:var(--neon);text-shadow:0 0 20px var(--neon),0 0 40px rgba(0,240,255,0.3);}
